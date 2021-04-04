@@ -1,7 +1,10 @@
 package com.codewithpk.photogallery;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 
+import androidx.annotation.WorkerThread;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -10,6 +13,8 @@ import java.util.List;
 import com.codewithpk.photogallery.api.FlickrApi;
 import com.codewithpk.photogallery.api.FlickrResponse;
 import com.codewithpk.photogallery.api.PhotoResponse;
+
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -50,5 +55,18 @@ public class FlickrFetchr {
             }
         });
         return responseLiveData;
+    }
+//Adding image downloading to FlickrFetchr
+    @WorkerThread
+    Bitmap fetchPhoto(String url) {
+        try {
+            Response<ResponseBody> response = mFlickrApi.fetchUrlBytes(url).execute();
+            Bitmap bitmap = BitmapFactory.decodeStream(response.body().byteStream());
+            Log.i(TAG, "Decoded bitmap from Response");
+            return bitmap;
+        } catch (Exception exception) {
+            Bitmap.Config conf = Bitmap.Config.ARGB_8888;
+            return Bitmap.createBitmap(150, 150, conf);
+        }
     }
 }
