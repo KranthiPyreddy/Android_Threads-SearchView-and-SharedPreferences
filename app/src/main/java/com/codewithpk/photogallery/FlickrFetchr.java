@@ -12,8 +12,10 @@ import java.util.List;
 
 import com.codewithpk.photogallery.api.FlickrApi;
 import com.codewithpk.photogallery.api.FlickrResponse;
+import com.codewithpk.photogallery.api.PhotoInterceptor;
 import com.codewithpk.photogallery.api.PhotoResponse;
 
+import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -27,18 +29,30 @@ public class FlickrFetchr {
     private FlickrApi mFlickrApi;
 
     FlickrFetchr() {
+    //Adding an interceptor to Retrofit configuration
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(new PhotoInterceptor())
+                .build();
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://api.flickr.com/") //Updating the base URL/// but the endpoints we want to hit are at com.codewithpk.photogallery.api.flickr.com/services/rest which is defined in path
                 .addConverterFactory(GsonConverterFactory.create()) //Updating FlickrFetchr for Gson
+                .client(client)
                 .build();
         mFlickrApi = retrofit.create(FlickrApi.class);
+    }
+    public LiveData<List<GalleryItem>> fetchPhotos() {
+        return fetchPhotoMetadata(mFlickrApi.fetchPhotos());
+    }
+    public LiveData<List<GalleryItem>> searchPhotos(String query) {
+        return fetchPhotoMetadata(mFlickrApi.searchPhotos(query));
     }
 //Adding fetchContents() Here to call it from PhotoGalleryFragment
 //Updating the base URL and call fetchPhotos
 //Updating FlickrFetchr for Gson
-    LiveData<List<GalleryItem>>fetchPhotos() {
+    private LiveData<List<GalleryItem>> fetchPhotoMetadata(Call<FlickrResponse>
+                                                               flickrRequest) {
         MutableLiveData<List<GalleryItem>> responseLiveData = new MutableLiveData<>(); ////Updating FlickrFetchr for Gson
-        Call<FlickrResponse> flickrRequest = mFlickrApi.fetchPhotos(); //Updating the base URL and call fetchPhotos
+
         flickrRequest.enqueue(new Callback<FlickrResponse>() {
             @Override
             public void onResponse(Call<FlickrResponse> call, Response<FlickrResponse> response) {

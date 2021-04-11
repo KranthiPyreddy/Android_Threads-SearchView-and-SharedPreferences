@@ -7,12 +7,16 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SearchView;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LiveData;
@@ -35,6 +39,8 @@ public class PhotoGalleryFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    //to register the fragment to receive menu callbacks
+        setHasOptionsMenu(true);
         mPhotoGalleryViewModel = ViewModelProviders.of(this).get(PhotoGalleryViewModel.class);
         //Retaining PhotoGalleryFragment
         setRetainInstance(true);
@@ -98,6 +104,53 @@ public class PhotoGalleryFragment extends Fragment {
                         mPhotoRecyclerView.setAdapter(new PhotoAdapter(galleryItems));
                     }
                 });
+        //Persisting query in shared preferences
+        String query = QueryPreferences.getStoredQuery(getActivity());
+        if (query != null) {
+            mPhotoGalleryViewModel.fetchPhotos(query);
+        }
+    }
+//Overriding onCreateOptionsMenu(…)
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
+        super.onCreateOptionsMenu(menu, menuInflater);
+        menuInflater.inflate(R.menu.fragment_photo_gallery, menu);
+//Logging SearchView.OnQueryTextListener events
+        MenuItem searchItem = menu.findItem(R.id.menu_item_search);
+        final SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String queryText) {
+                Log.d(TAG, "QueryTextSubmit: " + queryText);
+                QueryPreferences.setStoredQuery(getActivity(), queryText);
+                mPhotoGalleryViewModel.fetchPhotos(queryText);
+                return true;
+            }
+            @Override
+            public boolean onQueryTextChange(String s) {
+                Log.d(TAG, "QueryTextChange: " + s);
+                return false;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String query = QueryPreferences.getStoredQuery(getActivity());
+                searchView.setQuery(query, false);
+            }
+        });
+    }
+//Clearing a stored query
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_clear:
+                QueryPreferences.setStoredQuery(getActivity(), "");
+                mPhotoGalleryViewModel.fetchPhotos("");
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 //Adding a ViewHolder implementation
     private class PhotoHolder extends RecyclerView.ViewHolder {
